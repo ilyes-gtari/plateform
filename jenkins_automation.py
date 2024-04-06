@@ -71,14 +71,16 @@ def create_job():
 
 '''
 
-
-
-
 @app.route('/')
 def nexus():
+    # Nexus credentials
+    nexus_username = 'admin'
+    nexus_password = 'nexus'
+
     # Execute the curl command to retrieve repositories from the Nexus server
-    command = 'curl -X GET https://75ea-197-27-117-30.ngrok-free.app/service/rest/v1/repositories'
+    command = f'curl -X GET http://192.168.192.8:8081/service/rest/v1/repositories -u {nexus_username}:{nexus_password}'
     result = subprocess.run(command, shell=True, capture_output=True, text=True)
+    
     # Check if the command executed successfully and return the result directly
     if result.returncode == 0:
         repositories = json.loads(result.stdout)
@@ -87,46 +89,79 @@ def nexus():
         error_message = f"Error executing curl command: {result.stderr}"
         return render_template('nexus.html', error_message=error_message)
 
+
+
 @app.route('/', methods=['POST'])
 def create_repository():
     # Nexus credentials
     nexus_username = 'admin'
     nexus_password = 'nexus'
 
-    # Execute the curl command to create a repository with Nexus authentication
+    # JSON data for creating the repository
+    data = '''
+    {
+        "name": "internal",
+        "online": true,
+        "storage": {
+            "blobStoreName": "default",
+            "strictContentTypeValidation": true,
+            "writePolicy": "allow_once"
+        },
+        "cleanup": {
+            "policyNames": [
+                "string"
+            ]
+        },
+        "component": {
+            "proprietaryComponents": true
+        },
+        "maven": {
+            "versionPolicy": "MIXED",
+            "layoutPolicy": "STRICT",
+            "contentDisposition": "ATTACHMENT"
+        }
+    }
+    '''
+
+    # Execute the curl command to create a repository
     command = f'''curl -X 'POST' \
-  'https://75ea-197-27-117-30.ngrok-free.app/service/rest/v1/repositories/maven/hosted' \
+  'http://192.168.192.8:8081/service/rest/v1/repositories/maven/hosted' \
   -H 'accept: application/json' \
   -H 'Content-Type: application/json' \
+  -H 'NX-ANTI-CSRF-TOKEN: 0.6467748182939269' \
+  -H 'X-Nexus-UI: true' \
   -u {nexus_username}:{nexus_password} \
-  -d '{
-  "name": "internal",
-  "online": true,
-  "storage": {
-    "blobStoreName": "default",
-    "strictContentTypeValidation": true,
-    "writePolicy": "allow_once"
-  },
-  "cleanup": {
-    "policyNames": [
-      "string"
-    ]
-  },
-  "component": {
-    "proprietaryComponents": true
-  },
-  "maven": {
-    "versionPolicy": "MIXED",
-    "layoutPolicy": "STRICT",
-    "contentDisposition": "ATTACHMENT"
-  }
-}' '''
+  -d '{data}' '''
     result = subprocess.run(command, shell=True, capture_output=True, text=True)
 
     # Check if the command executed successfully and return the result
     if result.returncode == 0:
         response = json.loads(result.stdout)
         return render_template('nexus.html', response=response)
+    else:
+        error_message = f"Error executing curl command: {result.stderr}"
+        return render_template('nexus.html', error_message=error_message)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 if __name__ == '__main__':
     app.run(debug=True)
