@@ -19,6 +19,20 @@
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
   <!-- CSS Files -->
   <link id="pagestyle" href="/static/assets/css/material-kit.css?v=3.0.0" rel="stylesheet" />
+  <style>
+        table {
+            border-collapse: collapse;
+            width: 50%;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+    </style>
 
 </head>
 
@@ -70,16 +84,20 @@
               </div>
               <div class="col-lg-3">
                 <div class="nav-wrapper position-relative end-0">
-                  <ul class="nav nav-pills nav-fill flex-row p-1" role="tablist">
-                   
+                  
+                 <ul class="nav nav-pills nav-fill flex-row p-1" role="tablist">
                     <li class="nav-item">
-                        <a href="http://192.168.192.8:8081" role="tab" aria-selected="false">
-                            <img src="static\assets\img\nexus.jpg" alt="Nexus Dashboard" class="me-2" style="width: 20px;"> View Nexus Dashboard
-                        </a>
-                         
+                      <a href="/nodes" role="tab" aria-selected="false">
+                        <img src="static\assets\img\nexus.jpg" alt="Nexus Dashboard" class="me-2" style="width: 20px;"> Nodes
+                        
+                      </a>
                     </li>
-                    
                   </ul>
+
+
+
+                  
+
                 </div>
               </div>
             </div>
@@ -87,77 +105,48 @@
           <div class="tab-content tab-space">
             <div class="tab-pane active" id="preview-header-1">
             
-              
 
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nexus API Result</title>
-    <style>
-        table {
-            width: 50%;
-            border-collapse: collapse;
-        }
-        th, td {
-            border: 1px solid black;
-            padding: 8px;
-            text-align: left;
-        }
-    </style>
 
-    <h1>Nexus API Result</h1>
-    {% if repositories %}
-        <h2>Repositories:</h2>
-        <table>
-            <thead>
-                <tr>
-                    <th>Name</th>
-                    <th>Type</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for repo in repositories %}
-                    <tr>
-                        <td>{{ repo.name }}</td>
-                        <td>{{ repo.type }}</td>
-                    </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    {% else %}
-        <p>{{ error_message }}</p>
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+            <div class="alert alert-{{ category }}" role="alert">
+                {{ message }}
+            </div>
+        {% endfor %}
     {% endif %}
+    {% endwith %}
 
-      
-<form action="/nexus" method="POST">
-        <label for="repo_name">Repository Name:</label>
-        <input type="text" id="repo_name" name="repo_name" required>
-        <button type="submit">Create Repository</button>
+    <h2>Create Namespace:</h2>
+    <form action="{{ url_for('create_namespace') }}" method="post">
+        <label for="namespace_name">Namespace Name:</label>
+        <input type="text" id="namespace_name" name="namespace_name" required><br>
+
+        <input type="submit" value="Create Namespace" class="btn btn-primary">
     </form>
 
 
-
- <!-- Add delete repository form -->
-<form action="/nexus" method="POST">
-  <label for="delete_repo_name">Repository Name to Delete:</label>
- <input type="text" id="delete_repo_name" name="delete_repo_name" required>
-  <button type="submit">Delete Repository</button>
-</form>
+<br>
 
 
+  <h2>List of Namespaces:</h2>
+    <table>
+        <tr>
+            <th>Namespace Name</th>
+        </tr>
+        {% for namespace in namespaces %}
+        <tr>
+            <td>{{ namespace.metadata.name }}</td>
+        </tr>
+        {% endfor %}
+    </table>
 
 
-                    <!-- Your remaining content -->
 
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
+  
+    
 </body>
 
 </html>
+
+

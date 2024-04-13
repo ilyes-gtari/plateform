@@ -73,7 +73,7 @@
                   <ul class="nav nav-pills nav-fill flex-row p-1" role="tablist">
                    
                     <li class="nav-item">
-                        <a href="http://192.168.192.8:8081" role="tab" aria-selected="false">
+                        <a href="https://950b-197-27-117-30.ngrok-free.app" role="tab" aria-selected="false">
                             <img src="static\assets\img\nexus.jpg" alt="Nexus Dashboard" class="me-2" style="width: 20px;"> View Nexus Dashboard
                         </a>
                          
@@ -94,7 +94,7 @@
     <title>Nexus API Result</title>
     <style>
         table {
-            width: 50%;
+            width: 100%;
             border-collapse: collapse;
         }
         th, td {
@@ -127,21 +127,6 @@
         <p>{{ error_message }}</p>
     {% endif %}
 
-      
-<form action="/nexus" method="POST">
-        <label for="repo_name">Repository Name:</label>
-        <input type="text" id="repo_name" name="repo_name" required>
-        <button type="submit">Create Repository</button>
-    </form>
-
-
-
- <!-- Add delete repository form -->
-<form action="/nexus" method="POST">
-  <label for="delete_repo_name">Repository Name to Delete:</label>
- <input type="text" id="delete_repo_name" name="delete_repo_name" required>
-  <button type="submit">Delete Repository</button>
-</form>
 
 
 
