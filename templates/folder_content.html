@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ repo_name }} - {{ folder_path }}</title>
+</head>
+<body>
+    <h1>{{ repo_name }} - {{ folder_path }}</h1>
+    <ul>
+        {% for item in content %}
+            {% if item.type == 'dir' %}
+                <li><a href="/fetch_folder_content/{{ repo_name }}/{{ folder_path }}/{{ item.name }}">{{ item.name }}</a> (Folder)</li>
+            {% else %}
+                <li><a href="/fetch_file_content/{{ repo_name }}/{{ folder_path }}/{{ item.name }}">{{ item.name }}</a> (File)</li>
+            {% endif %}
+        {% endfor %}
+    </ul>
+</body>
+</html>
+

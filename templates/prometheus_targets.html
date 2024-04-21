@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prometheus Targets</title>
+    <style>
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .up {
+            color: green;
+        }
+        .down {
+            color: red;
+        }
+    </style>
+</head>
+<body>
+    <h1>Prometheus Targets</h1>
+    <table>
+        <tr>
+            <th>Job</th>
+            <th>Instance</th>
+            <th>Health</th>
+            <th>Last Scrape Time</th>
+        </tr>
+        {% for target in targets %}
+        <tr>
+            <td>{{ target.discoveredLabels.job }}</td>
+            <td>{{ target.discoveredLabels.instance }}</td>
+            <td class="{% if target.health == 'up' %}up{% else %}down{% endif %}">{{ target.health }}</td>
+            <td>{{ target.lastScrape }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+</body>
+</html>
+

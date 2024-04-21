@@ -1,0 +1,102 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    
+    <title>GitHub Login</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f6f8fa;
+        }
+
+        .tt {
+            max-width: 400px;
+            margin: 100px auto;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        input[type="text"], input[type="password"] {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            box-sizing: border-box;
+        }
+
+        input[type="submit"] {
+            width: 100%;
+            padding: 10px;
+            border: none;
+            background-color: #0366d6;
+            color: #fff;
+            border-radius: 3px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        input[type="submit"]:hover {
+            background-color: #0352a0;
+        }
+
+        .github-logo {
+            display: block;
+            margin: 20px auto; /* Marge supérieure et inférieure de 20px, centrage horizontal automatique */
+            width: 50px; /* Changer la largeur ici */
+            height: auto; /* Hauteur automatique pour conserver les proportions */
+        }
+    </style>
+    
+    
+</head>
+
+
+
+<body>
+
+  
+    <div class="tt">
+        <h1>GitHub Login</h1>
+        <form method="POST" action="/">
+            <img src="https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png" alt="GitHub Logo" class="github-logo">
+            <label for="username">GitHub Username:</label>
+            <input type="text" id="username" name="username">
+
+            <label for="token">GitHub Personal Access Token:</label>
+            <input type="password" id="token" name="token">
+
+            <input type="submit" value="Login">
+        </form>
+
+        </div>
+</body>
+
+
+
+
+
+
+
+
+</html>
+

@@ -6,10 +6,135 @@ import json
 import git
 import requests
 import base64
+import docker
+from flask import Flask, jsonify
+import re
+import xml.etree.ElementTree as ET
+from flask import request, redirect, url_for
+import secrets
+from flask import Flask, render_template, request, redirect, url_for, session
+from flask_pymongo import PyMongo
+from werkzeug.security import generate_password_hash, check_password_hash
+from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user
+
+from flask import Flask, request, render_template, redirect, url_for
+import requests
+import json
+from urllib.parse import quote
+import requests
+import base64
+from flask import Flask, request, render_template
+import git
+import git
+import base64
+from flask import Flask, request, render_template, redirect, url_for
+
+
 
 
 app = Flask(__name__)
+
+
+app.secret_key = secrets.token_hex(16)
+
+app.config['MONGO_URI'] = 'mongodb://localhost:27017/mydatabase'
+
+mongo = PyMongo(app)
+
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if request.method == 'POST':
+        username = request.form['username']
+        password = generate_password_hash(request.form['password'])
+        users = mongo.db.users
+        users.insert_one({'username': username, 'password': password})
+        return redirect(url_for('login'))
+    return render_template('register.html')
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+        users = mongo.db.users
+        user_data = users.find_one({'username': username})
+        if user_data and check_password_hash(user_data['password'], password):
+            session['username'] = username
+            return redirect(url_for('dashboard'))
+        else:
+            return 'Invalid username/password combination'
+    return render_template('login.html')
+
+
+
+login_manager = LoginManager()
+login_manager.init_app(app)
+
+class User(UserMixin):
+    pass
+
+@login_manager.user_loader
+def load_user(user_id):
+    user = User()
+    user.id = user_id
+    return user
+
+@app.route('/logout')
+@login_required
+def logout():
+    logout_user()
+    return redirect(url_for('iindex'))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 config.load_kube_config()
+
 
 
 
@@ -82,11 +207,42 @@ def create_job():
     return redirect(url_for('display_jobs'))
     
     
+@app.route('/get_pipeline_script', methods=['POST'])
+def get_pipeline_script():
+    job_name = request.form['job_name']
+    pipeline_script = server.get_job_config(job_name)
+
+    # Use regular expressions to extract the pipeline script content
+    pattern = re.compile(r'<script>(.*?)</script>', re.DOTALL)
+    match = pattern.search(pipeline_script)
+    if match:
+        pipeline_content = match.group(1)
+    else:
+        pipeline_content = "Pipeline script not found."
+
+    return render_template('pipeline_script.html', job_name=job_name, pipeline_content=pipeline_content)
+    
+    
+@app.route('/update_pipeline_script', methods=['POST'])
+def update_pipeline_script():
+    job_name = request.form['job_name']
+    updated_script = request.form['updated_script']
+    
+    # Retrieve the existing pipeline script
+    pipeline_script = server.get_job_config(job_name)
+    
+    # Replace the existing pipeline script with the updated script
+    updated_config = re.sub(r'<script>(.*?)</script>', f'<script>{updated_script}</script>', pipeline_script, flags=re.DOTALL)
+    
+    # Update the pipeline script in Jenkins
+    server.reconfig_job(job_name, updated_config)
+    
+    # Redirect to the page showing the updated pipeline script
+    return redirect(url_for('display_jobs', job_name=job_name))
     
     
     ############################################################
     #NEXUS CONFIGGGGGGGGGGG #
-
 
 @app.route('/nexus')
 def nexus():
@@ -101,13 +257,17 @@ def nexus():
     # Check if the command executed successfully and return the result directly
     if result.returncode == 0:
         repositories = json.loads(result.stdout)
-        return render_template('nexus.html', repositories=repositories)
+
+        # Count the number of repositories
+        repositories_count = len(repositories)
+
+        return render_template('nexus.html', repositories=repositories, repositories_count=repositories_count)
     else:
         error_message = f"Error executing curl command: {result.stderr}"
         return render_template('nexus.html', error_message=error_message)
         
         
-        
+
 @app.route('/nexus', methods=['POST'])
 def create_repository():
     # Nexus credentials
@@ -157,17 +317,8 @@ def create_repository():
 
     # Check if the create command executed successfully
     if result_create.returncode == 0:
-        # Execute the curl command to retrieve repositories from the Nexus server
-        retrieve_command = f'curl -X GET http://192.168.192.8:8081/service/rest/v1/repositories -u {nexus_username}:{nexus_password}'
-        result_retrieve = subprocess.run(retrieve_command, shell=True, capture_output=True, text=True)
-        
-        # Check if the retrieve command executed successfully
-        if result_retrieve.returncode == 0:
-            repositories = json.loads(result_retrieve.stdout)
-            return render_template('nexus.html', response=repositories)
-        else:
-            error_message = f"Error retrieving repositories: {result_retrieve.stderr}"
-            return render_template('nexus.html', error_message=error_message)
+        # Redirect to the /nexus route
+        return redirect(url_for('nexus'))
     else:
         error_message = f"Error creating repository: {result_create.stderr}"
         return render_template('nexus.html', error_message=error_message)
@@ -451,173 +602,327 @@ def list_namespaces():
 
 ###########################################################
 #GIIIIIIIIIIIIIT
+@app.route('/', methods=['GET', 'POST'])
+def index():
+    if request.method == 'POST':
+        username = request.form['username']
+        token = request.form['token']
+        return redirect(url_for('user_repos', username=username, token=token))
+    return render_template('index.html')
 
-@app.route('/git')
-def get_git_repos():
-    try:
-        # GitHub API endpoint for fetching user repositories
-        url = 'https://api.github.com/user/repos'
-        # Token for authorization
-        token = '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'
-        headers = {
-            'Authorization': f'token {token}',
-            'Accept': 'application/vnd.github.v3+json'
-        }
-
-        # Send GET request to GitHub API
-        response = requests.get(url, headers=headers)
-
-        # Check if request was successful
-        if response.status_code == 200:
-            # Extract repository names from JSON response
-            repos = [repo['name'] for repo in response.json()]
-            return render_template('git_repos.html', repos=repos)
-        else:
-            # Handle API request error
-            error_message = f"Error fetching repositories: {response.status_code}"
-            return render_template('git_repos.html', error_message=error_message)
-    except Exception as e:
-        # Handle general exception
-        error_message = f"Error: {str(e)}"
-        return render_template('git_repos.html', error_message=error_message)
-
-
-
-
-
-
-
-@app.route('/repo_content/<repo_name>', methods=['GET'])
-def show_repo_content(repo_name):
-    try:
-        # GitHub API endpoint for fetching repository content
-        url = f'https://api.github.com/repos/ilyes-gtari/{repo_name}/contents/'
-        # Token for authorization
-        token = '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'
-        headers = {
-            'Authorization': f'Bearer {token}',
-            'Accept': 'application/vnd.github.v3+json'
-        }
-
-        # Send GET request to GitHub API
-        response = requests.get(url, headers=headers)
-
-        # Check if request was successful
-        if response.status_code == 200:
-            # Extract repository content from JSON response
-            content = response.json()
-            return render_template('repo_content.html', repo_name=repo_name, content=content)
-        else:
-            # Handle API request error
-            error_message = f"Error fetching content of repository '{repo_name}': {response.status_code}"
-            return render_template('git_repos.html', error_message=error_message)
-    except Exception as e:
-        # Handle general exception
-        error_message = f"Error: {str(e)}"
-        return render_template('git_repos.html', error_message=error_message)
-        
-        
-        
-        
-@app.route('/repo_file/<repo_name>/<file_name>', methods=['GET'])
-def show_repo_file(repo_name, file_name):
-    try:
-        # GitHub API endpoint for fetching specific file content
-        url = f'https://api.github.com/repos/ilyes-gtari/{repo_name}/contents/{file_name}'
-        # Token for authorization
-        token = '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'
-        headers = {
-            'Authorization': f'Bearer {token}',
-            'Accept': 'application/vnd.github.v3+json'
-        }
-
-        # Send GET request to GitHub API
-        response = requests.get(url, headers=headers)
-
-        # Check if request was successful
-        if response.status_code == 200:
-            # Extract file content from JSON response
-            file_content = base64.b64decode(response.json()['content']).decode('utf-8')
-            return render_template('repo_file_content.html', repo_name=repo_name, file_name=file_name, file_content=file_content)
-        else:
-            # Handle API request error
-            error_message = f"Error fetching content of file '{file_name}' in repository '{repo_name}': {response.status_code}"
-            return render_template('git_repos.html', error_message=error_message)
-    except Exception as e:
-        # Handle general exception
-        error_message = f"Error: {str(e)}"
-        return render_template('git_repos.html', error_message=error_message)
-        
-        
-
-@app.route('/repo_content/<repo_name>/<path:folder_path>', methods=['GET'])
-def show_repo_folder(repo_name, folder_path):
-    try:
-        # GitHub API endpoint for fetching folder content
-        url = f'https://api.github.com/repos/ilyes-gtari/{repo_name}/contents/{folder_path}'
-        # Token for authorization
-        token = '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'
-        headers = {
-            'Authorization': f'Bearer {token}',
-            'Accept': 'application/vnd.github.v3+json'
-        }
-
-        # Send GET request to GitHub API
-        response = requests.get(url, headers=headers)
-
-        # Check if request was successful
-        if response.status_code == 200:
-            # Extract folder content from JSON response
-            content = response.json()
-            return render_template('repo_content.html', repo_name=repo_name, content=content)
-        else:
-            # Handle API request error
-            error_message = f"Error fetching content of folder '{folder_path}' in repository '{repo_name}': {response.status_code}"
-            return render_template('git_repos.html', error_message=error_message)
-    except Exception as e:
-        # Handle general exception
-        error_message = f"Error: {str(e)}"
-        return render_template('git_repos.html', error_message=error_message)
-        
-        
-        
-        
-
-
-
-
-@app.route('/create_repo', methods=['POST'])
-def create_repo():
-    repo_name = request.form['repo_name']
-    token = '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'
+@app.route('/repos/<username>', methods=['GET', 'POST'])
+def user_repos(username):
+    token = request.args.get('token')
     headers = {
-        'Authorization': f'token {token}',
-        'Accept': 'application/vnd.github.v3+json'
+        "Authorization": f"token {token}",
+        "Accept": "application/vnd.github.v3+json"
     }
-    data = {'name': repo_name}
-    response = requests.post('https://api.github.com/user/repos', headers=headers, json=data)
-    if response.status_code == 201:
-        flash(f'Repository "{repo_name}" created successfully!', 'success')
-        return redirect(url_for('get_git_repos'))  # Redirect to another route or page
-    else:
-        flash(f'Failed to create repository. Status code: {response.status_code}', 'danger')
-        return redirect(url_for('get_git_repos'))  # Redirect to another route or page
 
-@app.route('/delete_repo', methods=['POST'])
-def delete_repo():
-    repo_name = request.form['repo_name']
-    token = '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'
-    headers = {
-        'Authorization': f'Bearer {token}',
-        'Accept': 'application/vnd.github+json'
-    }
-    delete_url = f'https://api.github.com/repos/ilyes-gtari/{repo_name}'
-    response = requests.delete(delete_url, headers=headers)
-    if response.status_code == 204:
-        flash(f'Repository "{repo_name}" deleted successfully!', 'success')
+    if request.method == 'POST':
+        if 'create_repo' in request.form:
+            repo_name = request.form['repo_name']
+
+            data = {
+                "name": repo_name,
+                "description": "My new repository created using the GitHub API",
+                "private": False,
+                "auto_init": True
+            }
+
+            response = requests.post(f"https://api.github.com/user/repos", headers=headers, data=json.dumps(data))
+
+            if response.status_code == 201:
+                message = "Repository created successfully!"
+            else:
+                message = f"Failed to create repository. Status code: {response.status_code}, Response: {response.json()}"
+
+            return redirect(url_for('user_repos', username=username, token=token, message=message))
+
+        elif 'delete_repo' in request.form:
+            repo_name = request.form['delete_repo_name']
+
+            response = requests.delete(f"https://api.github.com/repos/{username}/{repo_name}", headers=headers)
+
+            if response.status_code == 204:
+                message = "Repository deleted successfully!"
+            else:
+                message = f"Failed to delete repository. Status code: {response.status_code}, Response: {response.json()}"
+
+            return redirect(url_for('user_repos', username=username, token=token, message=message))
+
+    # Get user's repositories
+    response = requests.get(f"https://api.github.com/users/{username}/repos", headers=headers)
+    if response.status_code == 200:
+        repos = response.json()
     else:
-        flash(f'Failed to delete repository "{repo_name}". Status code: {response.status_code}', 'danger')
-    return redirect(url_for('get_git_repos'))  # Redirect to another route or page
+        repos = []
+    
+    message = request.args.get('message')
+    return render_template('user_repos.html', username=username, token=token, repos=repos, message=message)
+
+@app.route('/repo/<username>/<repo_name>/contents/<path:folder_path>')
+def view_repo_contents(username, repo_name, folder_path):
+    token = request.args.get('token')
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Accept": "application/vnd.github.v3+json"
+    }
+
+    # Make GET request to fetch repository contents
+    response = requests.get(f"https://api.github.com/repos/{username}/{repo_name}/contents/{folder_path}", headers=headers)
+
+    if response.status_code == 200:
+        contents = response.json()
+    else:
+        contents = []
+
+    return render_template('repo_contents.html', username=username, token=token, repo_name=repo_name, contents=contents)
+
+
+@app.route('/repo/<username>/<repo_name>/file/<path:file_path>')
+def view_file_content(username, repo_name, file_path):
+    token = request.args.get('token')
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Accept": "application/vnd.github.v3+json"
+    }
+
+    # Make GET request to fetch file content
+    api_url = f"https://api.github.com/repos/{username}/{repo_name}/contents/{file_path}"
+    response = requests.get(api_url, headers=headers)
+
+    if response.status_code == 200:
+        file_content = response.json().get('content')
+        # Decode the base64-encoded content
+        decoded_content = base64.b64decode(file_content).decode('utf-8')
+    else:
+        decoded_content = "File content not available."
+
+    return render_template('file_content.html', username=username, repo_name=repo_name, file_path=file_path, content=decoded_content)
+
+
+@app.route('/repo/<username>/<repo_name>/tree')
+def view_repo_tree(username, repo_name):
+    token = request.args.get('token')
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Accept": "application/vnd.github.v3+json"
+    }
+
+    # Make GET request to fetch repository tree
+    api_url = f"https://api.github.com/repos/{username}/{repo_name}/git/trees/main?recursive=1"  # Use 'main' or 'master' for the branch name
+    response = requests.get(api_url, headers=headers)
+
+    if response.status_code == 200:
+        tree_data = response.json()
+    else:
+        tree_data = {}
+
+    return render_template('repo_tree.html', username=username, token=token, repo_name=repo_name, tree_data=tree_data)
+
+
+@app.route('/repo/<username>/<repo_name>/file/<path:file_path>', methods=['GET', 'POST'])
+def view_and_edit_file(username, repo_name, file_path):
+    if request.method == 'GET':
+        token = request.args.get('token')
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "Accept": "application/vnd.github.v3+json"
+        }
+
+        # Make GET request to fetch file content
+        api_url = f"https://api.github.com/repos/{username}/{repo_name}/contents/{file_path}"
+        response = requests.get(api_url, headers=headers)
+
+        if response.status_code == 200:
+            file_content = response.json().get('content')
+            # Decode the base64-encoded content
+            decoded_content = base64.b64decode(file_content).decode('utf-8')
+        else:
+            decoded_content = "File content not available."
+
+        return render_template('file_content.html', username=username, repo_name=repo_name, file_path=file_path, content=decoded_content)
+    elif request.method == 'POST':
+        token = request.form.get('token')
+        new_content = request.form.get('new_content')
+
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "Accept": "application/vnd.github.v3+json"
+        }
+
+        # Get the latest file SHA
+        api_url = f"https://api.github.com/repos/{username}/{repo_name}/contents/{file_path}"
+        response = requests.get(api_url, headers=headers)
+        if response.status_code == 200:
+            latest_sha = response.json().get('sha')
+
+            # Encode new content to base64
+            new_content_encoded = base64.b64encode(new_content.encode('utf-8')).decode('utf-8')
+
+            # Make PUT request to update file content
+            update_data = {
+                "message": "Update file via API",
+                "content": new_content_encoded,
+                "sha": latest_sha
+            }
+            update_url = f"https://api.github.com/repos/{username}/{repo_name}/contents/{file_path}"
+            update_response = requests.put(update_url, headers=headers, json=update_data)
+
+            if update_response.status_code == 200:
+                return redirect(url_for('view_and_edit_file', username=username, repo_name=repo_name, file_path=file_path, token=token))
+            else:
+                return "Error updating file content."
+        else:
+            return "Error fetching latest file SHA."
+
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+
+
+############## DOCKEEEEEER 
+
+
+# Initialize Docker client
+docker_client = docker.from_env()
+
+@app.route('/docker/images')
+def get_docker_images():
+    images = docker_client.images.list()
+    image_info = [{'id': image.id, 'tags': image.tags} for image in images]
+    return render_template('docker_images.html', images=image_info)
+
+
+@app.route('/docker/containers')
+def get_docker_containers():
+    containers = docker_client.containers.list()
+    container_info = [{'id': container.id, 'name': container.name} for container in containers]
+    return render_template('docker_containers.html', containers=container_info)
+
+@app.route('/docker/processes')
+def get_docker_processes():
+    processes = docker_client.containers.list(all=True)
+    process_info = [{'id': process.id, 'name': process.name} for process in processes]
+    return render_template('docker_processes.html', processes=process_info)
+
+@app.route('/docker/start', methods=['POST'])
+def start_docker_container():
+    container_name = request.form['container_name']
+    try:
+        container = docker_client.containers.get(container_name)
+        container.start()
+        flash(f"Container {container_name} started successfully.", 'success')
+    except docker.errors.NotFound:
+        flash(f"Container {container_name} not found.", 'error')
+    return redirect(url_for('get_docker_processes'))  # Redirect to the homepage or any other page
+
+@app.route('/docker/stop', methods=['POST'])
+def stop_docker_container():
+    container_id = request.form['container_id']
+    try:
+        container = docker_client.containers.get(container_id)
+        container.stop()
+        flash(f"Container {container_id} stopped successfully.", 'success')
+    except docker.errors.NotFound:
+        flash(f"Container {container_id} not found.", 'error')
+    return redirect(url_for('get_docker_processes'))  # Redirect to the homepage or any other page
+    
+    
+@app.route('/docker_management')
+def iindex():
+    return render_template('docker_management.html')
+    
+ 
+
+
+############## PROMMMMMMMMMMMMMMMMMMMMMMMMMMMETHEEUS
+
+
+def get_prometheus_targets(prometheus_url):
+    api_url = f"{prometheus_url}/api/v1/targets"
+    response = requests.get(api_url)
+    if response.status_code == 200:
+        data = response.json()
+        targets = data['data']['activeTargets']
+        return targets
+    else:
+        return None
+
+@app.route('/prometheus/targets')
+def prometheus_targets():
+    prometheus_url = "http://192.168.192.8:9090"  # Replace with your Prometheus URL
+    targets = get_prometheus_targets(prometheus_url)
+    
+    return render_template('prometheus_targets.html', targets=targets)
+
+ 
+
+
+
+@app.route('/dashboard')
+def dashboard():
+    if 'username' in session:
+        # Call the function to get jobs count
+        count_jobs = jobs_count()
+
+        # Get the number of Docker containers
+        containers = docker_client.containers.list()
+        containers_count = len(containers)
+
+        # Get the number of deployments
+        try:
+            # Load Kubernetes configuration
+            config.load_kube_config()
+
+            # Get Kubernetes API client for deployments
+            apps_v1 = client.AppsV1Api()
+
+            # Retrieve all deployments
+            deployments = apps_v1.list_deployment_for_all_namespaces().items
+
+            # Count the number of deployments
+            deployments_count = len(deployments)
+        except Exception as e:
+            deployments_count = 0  # Handle the case where retrieving deployments fails
+
+        return render_template('dashboard.html', jobs_count=count_jobs, containers_count=containers_count, deployments_count=deployments_count)
+    else:
+        return redirect(url_for('login'))
+
+
 
 
 

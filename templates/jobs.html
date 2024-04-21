@@ -26,7 +26,7 @@
 
   <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
     <div class="container">
-      <a class="navbar-brand" href="#">
+    <a class="navbar-brand" href="/dashboard">
         <img src="static\assets\img\bg2.jpg" alt="Your Logo" class="me-2" style="height: 30px;"> 
       </a>
       
@@ -35,20 +35,26 @@
         <span class="navbar-toggler-icon"></span>
       </button>
       <div class="collapse navbar-collapse" id="navbarNav">
-        <ul class="navbar-nav">
-                    <li class="nav-item">
-            <a class="nav-link" href="nexus.html">Nexus</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="#">Sonar</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="#">Prometheus</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="#">Grafana</a>
-          </li>
-        </ul>
+         <ul class="navbar-nav">
+    <li class="nav-item">
+        <a class="nav-link" href="/jobs">Jenkins</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" href="/nodes">Kubernetes</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" href="/nexus">Nexus</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" href="/docker_management">Docker</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" href="/">Git</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" href="#">Grafana</a>
+    </li>
+</ul>
       </div>
     </div>
   </nav>
@@ -73,7 +79,7 @@
                   <ul class="nav nav-pills nav-fill flex-row p-1" role="tablist">
                    
                     <li class="nav-item">
-                        <a href="https://fa59-197-27-117-30.ngrok-free.app" role="tab" aria-selected="false">
+                        <a href="http://192.168.192.8:8080" role="tab" aria-selected="false">
                             <img src="static\assets\img\jenkins.jpg" alt="Jenkins Dashboard" class="me-2" style="width: 20px;"> View Jenkins Dashboard
                         </a>
                     </li>
@@ -103,42 +109,58 @@
                     
                         <h2>Hello {{ user }} from Jenkins {{ version }}</h2>
                     
-                        <form action="/create_job" method="POST">
-                            <label for="job_name">Enter Job Name:</label>
-                            <input type="text" id="job_name" name="job_name">
-                            <input type="submit" value="Create Job">
-                        </form>
+                     
+   <form action="/create_job" method="POST">
+    <div class="mb-3">
+        <label for="job_name" class="form-label">Enter Job Name:</label>
+        <input type="text"id="job_name" name="job_name">
+    </div>
+    <button type="submit" class="btn btn-primary">Create Job</button>
+</form>
+
                         
                         <h3>Jobs:</h3>
                     
-                        <table border="1">
-                            <thead>
-                                <tr>
-                                    <th>Job Name</th>
-                                    <th>Action</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for job in jobs %}
-                                <tr>
-                                    <td>{{ job.name }}</td>
-                                    <td>
-                                        <form action="/build_job" method="POST">
-                                            <input type="hidden" name="job_name" value="{{ job.name }}">
-                                            <input type="submit" value="Build">
-                                        </form>
-                                    </td>
-                                    <td>
-                                        <form action="/delete_job" method="POST">
-                                            <input type="hidden" name="job_name" value="{{ job.name }}">
-                                            <input type="submit" value="Delete">
-                                        </form>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                               
-                            </tbody>
-                        </table>
+          <style>
+        /* Custom CSS styles for the table */
+        .table-container {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container table-container">
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>Job Name</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for job in jobs %}
+                <tr>
+                    <td>{{ job.name }}</td>
+                    <td>
+                        <div class="btn-group" role="group" aria-label="Job Actions">
+                            <form action="/build_job" method="POST">
+                                <input type="hidden" name="job_name" value="{{ job.name }}">
+                                <button type="submit" class="btn btn btn-success">Build</button>
+                            </form>
+                            <form action="/delete_job" method="POST">
+                                <input type="hidden" name="job_name" value="{{ job.name }}">
+                                <button type="submit" class="btn btn-danger">Delete</button>
+                            </form>
+                            <form action="/get_pipeline_script" method="POST">
+                                <input type="hidden" name="job_name" value="{{ job.name }}">
+                                <button type="submit" class="btn btn-success">View Pipeline Script</button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
                         <strong><h9>Total Jobs: {{ count }}</h9></strong>
                         <p>
                             {% if job_exist_message %}
