@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>View SonarQube Issues</title>
+</head>
+<body>
+    <h1>SonarQube Issues</h1>
+    <ul>
+        {% for issue in issues %}
+        <li>
+            <strong>Issue Key:</strong> {{ issue.key }}
+            <br>
+            <strong>Severity:</strong> {{ issue.severity }}
+            <br>
+            <strong>Rule:</strong> {{ issue.rule }}
+            <br>
+            <strong>Type:</strong> {{ issue.type }}
+            <br>
+            <strong>Component:</strong> {{ issue.component }}
+            <br>
+            <strong>Message:</strong> {{ issue.message }}
+            <br>
+            <strong>File:</strong> {{ issue.component }}
+            <br>
+            <strong>Line:</strong> {{ issue.line }}
+        </li>
+        {% endfor %}
+    </ul>
+</body>
+</html>
+

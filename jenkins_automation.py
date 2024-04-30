@@ -28,29 +28,43 @@ import git
 import git
 import base64
 from flask import Flask, request, render_template, redirect, url_for
+from flask import Flask, render_template, request, redirect, url_for, session
+from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
+from flask_login import login_required
+from mongoengine import Document, StringField, DateTimeField
+from datetime import datetime
+from bson.objectid import ObjectId
+from datetime import datetime, timedelta
+import secrets
+from flask import Flask, render_template, request, redirect, flash, url_for
+from flask_mail import Mail, Message
+import smtplib
+import ssl
+from email.message import EmailMessage
+
 
 
 
 
 app = Flask(__name__)
-
+mail = Mail(app)
 
 app.secret_key = secrets.token_hex(16)
 
 app.config['MONGO_URI'] = 'mongodb://localhost:27017/mydatabase'
 
 mongo = PyMongo(app)
-
-
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
         username = request.form['username']
         password = generate_password_hash(request.form['password'])
+        role = request.form['role']
         users = mongo.db.users
-        users.insert_one({'username': username, 'password': password})
+        users.insert_one({'username': username, 'password': password, 'role': role, 'approved': False})
         return redirect(url_for('login'))
     return render_template('register.html')
+
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -58,21 +72,122 @@ def login():
         username = request.form['username']
         password = request.form['password']
         users = mongo.db.users
-        user_data = users.find_one({'username': username})
+        user_data = users.find_one({'username': username, 'approved': True})
         if user_data and check_password_hash(user_data['password'], password):
             session['username'] = username
             return redirect(url_for('dashboard'))
         else:
-            return 'Invalid username/password combination'
+            flash('Invalid username/password combination or account not approved', 'error')
+            return render_template('login.html')
     return render_template('login.html')
+    
+    
+    
+# Define email sender and receiver
+email_sender = 'lasslass27@gmail.com'
+email_password = 'tnjs tvxi yyzc cnmc'
 
+# Set the subject and body of the email
+subject = 'LEARNOPS'
+body = """
+Your password has been successfully reset
+"""
+
+
+    
+    
+    
+@app.route('/forgot_password', methods=['GET', 'POST'])
+def forgot_password():
+    if request.method == 'POST':
+        username = request.form['username']
+        email = request.form['email']  # Get the email input
+        new_password = request.form['new_password']
+        users = mongo.db.users
+        user_data = users.find_one({'username': username, 'approved': True})
+        if user_data:
+            # Update the user's password
+            users.update_one({'username': username}, {'$set': {'password': generate_password_hash(new_password)}})
+            # Send password reset confirmation email
+            send_password_reset_email(email)
+            flash('Password reset successful. You can now login with your new password.', 'success')
+            return redirect(url_for('login'))
+        else:
+            flash('Username not found or account not approved', 'error')
+            return render_template('forgot_password.html')
+    return render_template('forgot_password.html')
+
+def send_password_reset_email(email_receiver):
+    msg = EmailMessage()
+    msg['From'] = email_sender
+    msg['To'] = email_receiver
+    msg['Subject'] = subject
+    msg.set_content(body)
+
+    # Add SSL (layer of security)
+    context = ssl.create_default_context()
+
+    # Log in and send the email
+    with smtplib.SMTP_SSL('smtp.gmail.com', 465, context=context) as smtp:
+        smtp.login(email_sender, email_password)
+        smtp.send_message(msg)
+
+    
+
+
+
+
+
+
+    
+    
+    
 
 
 login_manager = LoginManager()
 login_manager.init_app(app)
 
 class User(UserMixin):
+    def __init__(self, username, password, role='user', is_superuser=False):
+        self.username = username
+        self.password = password
+        self.role = role
+        
+
+class User(UserMixin):
     pass
+    
+@app.route('/manage_users', methods=['GET', 'POST'])
+def manage_users():
+    role_filter = request.args.get('role')
+    users = mongo.db.users
+
+    if role_filter:
+        filtered_users = users.find({'role': role_filter})
+    else:
+        filtered_users = users.find()
+
+    if request.method == 'POST':
+        username = request.form['username']
+        action = request.form['action']  # 'approve', 'delete'
+        user = users.find_one({'username': username})
+        if user:
+            if action == 'approve':
+                users.update_one({'username': username}, {'$set': {'approved': True}})
+                flash(f'User {username} approved successfully', 'success')
+            elif action == 'delete':
+                users.delete_one({'username': username})
+                flash(f'User {username} deleted successfully', 'success')
+            else:
+                flash('Invalid action', 'error')
+        else:
+            flash('User not found', 'error')
+
+    return render_template('manage_users.html', users=filtered_users)
+
+
+
+
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -84,7 +199,7 @@ def load_user(user_id):
 @login_required
 def logout():
     logout_user()
-    return redirect(url_for('iindex'))
+    return redirect(url_for('login'))
 
 
 
@@ -883,12 +998,74 @@ def get_prometheus_targets(prometheus_url):
 
 @app.route('/prometheus/targets')
 def prometheus_targets():
-    prometheus_url = "http://192.168.192.8:9090"  # Replace with your Prometheus URL
+    prometheus_url = "http://192.168.192.8:30000"  # Replace with your Prometheus URL
     targets = get_prometheus_targets(prometheus_url)
     
     return render_template('prometheus_targets.html', targets=targets)
+    
+   ###########SONAAAAAAAAAAAAR 
+    
+    
 
  
+import requests
+from requests.auth import HTTPBasicAuth
+
+@app.route('/sonarproject')
+def sonarproject():
+    # SonarQube API endpoint for projects search
+    sonarqube_projects_url = 'http://192.168.192.8:9000/api/projects/search'
+
+    # Username and password for basic authentication
+    username = 'admin'
+    password = 'sonar'
+
+    # Define headers with basic authentication
+    auth = HTTPBasicAuth(username, password)
+
+    # Make a GET request to retrieve projects
+    response = requests.get(sonarqube_projects_url, auth=auth)
+
+    # Check if the request was successful (status code 200)
+    if response.status_code == 200:
+        projects_data = response.json()
+        projects = []
+        for project in projects_data['components']:
+            # Fetch issues data for each project
+            issues_url = f'http://192.168.192.8:9000/api/issues/search?ps=100&projectKeys={project["key"]}&facets=types'
+            issues_response = requests.get(issues_url, auth=auth)
+            if issues_response.status_code == 200:
+                issues_data = issues_response.json()
+                projects.append({
+                    'key': project['key'],
+                    'name': project['name'],
+                    'issues_data': issues_data  # Pass the issues data to the project
+                })
+            else:
+                projects.append({
+                    'key': project['key'],
+                    'name': project['name'],
+                    'issues_data': {'error': f'Failed to fetch issues. Status code: {issues_response.status_code}'}
+                })
+        return render_template('sonarprojects.html', projects=projects)
+    else:
+        return f'Error: Failed to retrieve projects. Status code: {response.status_code}'
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -896,11 +1073,15 @@ def prometheus_targets():
 def dashboard():
     if 'username' in session:
         # Call the function to get jobs count
+       
         count_jobs = jobs_count()
+        username = session.get('username')
 
         # Get the number of Docker containers
         containers = docker_client.containers.list()
         containers_count = len(containers)
+        
+        
 
         # Get the number of deployments
         try:
@@ -918,7 +1099,7 @@ def dashboard():
         except Exception as e:
             deployments_count = 0  # Handle the case where retrieving deployments fails
 
-        return render_template('dashboard.html', jobs_count=count_jobs, containers_count=containers_count, deployments_count=deployments_count)
+        return render_template('dashboard.html', jobs_count=count_jobs, containers_count=containers_count, deployments_count=deployments_count,username=username)
     else:
         return redirect(url_for('login'))
 

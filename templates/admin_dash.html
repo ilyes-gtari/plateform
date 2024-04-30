@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard</title>
+</head>
+<body>
+    <h1>Admin Dashboard</h1>
+
+    {% if current_user.role == 'superadmin' %}
+        <h2>Pending Users</h2>
+        <ul>
+            {% for user in pending_users %}
+                <li>{{ user.username }} - {{ user.role }}</li>
+                <form method="POST" action="{{ url_for('approve_user', username=user.username) }}">
+                    <button type="submit">Approve</button>
+                </form>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p>You are not authorized to view this page.</p>
+    {% endif %}
+
+    <a href="{{ url_for('logout') }}">Logout</a>
+</body>
+</html>
+

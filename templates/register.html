@@ -77,13 +77,20 @@
     <div class="form-container" id="formContainer">
         <h1>Register</h1>
         <form id="registerForm" method="POST" action="{{ url_for('register') }}">
-            <label for="username">Username:</label>
-            <input type="text" id="username" name="username" required><br>
-            <label for="password">Password:</label>
-            <input type="password" id="password" name="password" required minlength="4"><br>
-            <span id="passwordError" class="error-message"></span> <!-- Error message container -->
-            <button type="submit">Register</button>
-        </form>
+    <label for="username">Username:</label>
+    <input type="text" id="username" name="username" required><br>
+    <label for="password">Password:</label>
+    <input type="password" id="password" name="password" required minlength="4"><br>
+    <label for="role">Role:</label>
+    <select id="role" name="role">
+        <option value="user">User</option>
+        <option value="tester">Tester</option>
+        <option value="developer">Developer</option>
+    </select><br>
+    <span id="passwordError" class="error-message"></span> <!-- Error message container -->
+    <button type="submit">Register</button>
+</form>
+
         <div>
             <label for="darkModeToggle">Dark Mode:</label>
             <input type="checkbox" id="darkModeToggle">

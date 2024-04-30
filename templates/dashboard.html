@@ -64,11 +64,17 @@
                     <li class="nav-item">
                         <a class="nav-link" href="#">Grafana</a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/sonarproject">SonarQ</a>
+                    </li>
                 </ul>
             </div>
             <div>
+              <input type="checkbox" id="darkModeToggle">
                 <label for="darkModeToggle">Dark Mode:</label>
-                <input type="checkbox" id="darkModeToggle">
+                 
+              
+                 <a href="{{ url_for('login') }}">Disconnect</a>
             </div>
         </div>
     </nav>
@@ -100,7 +106,15 @@
         });
     </script>
     
+    <div style="display: flex; justify-content: center;">Welcome, {{ username }}</div>
+    <br>
+    <br>
+    
+ 
    <div style="display: flex; justify-content: center;">
+   
+      
+    
         <!-- Jenkins section -->
         <div style="display: flex; align-items: center; flex-direction: column; margin-right: 20px;">
             <div style="width: 150px; height: 150px; background-color: #f8f9fa; border-radius: 8px; border: 1px solid #ccc; display: flex; align-items: center; justify-content: center;">
